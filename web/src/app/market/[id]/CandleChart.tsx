@@ -80,15 +80,19 @@ export default function CandleChart({
     });
   }, [livePrice, candles]);
 
-  if (candles.length === 0) {
-    return (
-      <div className="h-105 flex items-center justify-center rounded-xl border border-line bg-cream px-8 text-center text-sm text-mute">
-        No price history yet — snapshots accumulate every 30 s while the market
-        moves. Panta itself doesn't expose history; this chart is built from
-        our own capture layer.
-      </div>
-    );
-  }
-
-  return <div ref={ref} className="h-105 w-full rounded-xl overflow-hidden" />;
+  // chart container is ALWAYS mounted so the create-effect above runs on
+  // first render; the empty state is just an overlay, data folds in later
+  return (
+    <div className="relative h-105 w-full overflow-hidden rounded-xl border border-line bg-cream">
+      <div ref={ref} className="absolute inset-0" />
+      {candles.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center bg-cream px-8 text-center text-sm text-mute">
+          No price history yet — snapshots accumulate every 30 s while the
+          market moves, and the trade tape backfills to a market's first
+          trade. Panta itself doesn't expose history; this chart is built
+          from our own capture layer.
+        </div>
+      )}
+    </div>
+  );
 }

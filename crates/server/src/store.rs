@@ -168,37 +168,49 @@ impl Store {
         Ok(res.rows_affected() > 0)
     }
 
-    /// OHLC over our own snapshots. `bucket_secs`: 60 / 300 / 3600.
+    /// OHLC over our own price points: 30 s snapshots **plus** trade-tape
+    /// prices. The tape reaches back to a market's first trade (until Panta
+    /// rotates it), so a freshly opened market gets instant history.
+    /// `bucket_secs`: 60 / 300 / 3600 / 86400.
     pub async fn candles(&self, market_id: &str, bucket_secs: i64, limit: i64) -> Result<Vec<Candle>, sqlx::Error> {
         let rows = sqlx::query(
-            r#"SELECT (ts / ?1) * ?1 AS bucket,
-                      MIN(ts) AS first_ts, MAX(ts) AS last_ts,
-                      MIN(yes_price) AS lo, MAX(yes_price) AS hi, COUNT(*) AS n
-               FROM snapshots WHERE market_id = ?2 AND yes_price IS NOT NULL
-               GROUP BY bucket ORDER BY bucket DESC LIMIT ?3"#,
+            r#"SELECT ts, price FROM (
+                  SELECT ts, yes_price AS price FROM snapshots
+                  WHERE market_id = ?1 AND yes_price IS NOT NULL
+                  UNION ALL
+                  SELECT ts, price FROM trades
+                  WHERE market_id = ?1 AND price IS NOT NULL
+               ) ORDER BY ts"#,
         )
-        .bind(bucket_secs).bind(market_id).bind(limit)
+        .bind(market_id)
         .fetch_all(&self.pool)
         .await?;
-        let mut out = Vec::with_capacity(rows.len());
+        let mut buckets: std::collections::BTreeMap<i64, Candle> = std::collections::BTreeMap::new();
         for r in &rows {
-            let bucket: i64 = r.get("bucket");
-            let first_ts: i64 = r.get("first_ts");
-            let last_ts: i64 = r.get("last_ts");
-            let open: Option<f64> = sqlx::query("SELECT yes_price FROM snapshots WHERE market_id=?1 AND ts=?2")
-                .bind(market_id).bind(first_ts).fetch_one(&self.pool).await?.try_get(0).ok();
-            let close: Option<f64> = sqlx::query("SELECT yes_price FROM snapshots WHERE market_id=?1 AND ts=?2")
-                .bind(market_id).bind(last_ts).fetch_one(&self.pool).await?.try_get(0).ok();
-            out.push(Candle {
-                bucket_start: bucket,
-                open: open.unwrap_or(0.0),
-                high: r.get::<Option<f64>, _>("hi").unwrap_or(0.0),
-                low: r.get::<Option<f64>, _>("lo").unwrap_or(0.0),
-                close: close.unwrap_or(0.0),
-                ticks: r.get("n"),
-            });
+            let ts: i64 = r.get("ts");
+            let price: f64 = r.get("price");
+            let b = (ts / bucket_secs) * bucket_secs;
+            buckets
+                .entry(b)
+                .and_modify(|c| {
+                    c.high = c.high.max(price);
+                    c.low = c.low.min(price);
+                    c.close = price;
+                    c.ticks += 1;
+                })
+                .or_insert(Candle {
+                    bucket_start: b,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    ticks: 1,
+                });
         }
-        out.reverse();
+        let mut out: Vec<Candle> = buckets.into_values().collect();
+        if out.len() as i64 > limit {
+            out = out.split_off(out.len() - limit as usize);
+        }
         Ok(out)
     }
 
