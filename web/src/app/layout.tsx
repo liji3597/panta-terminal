@@ -49,6 +49,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               >
                 Portfolio
               </Link>
+              <Link
+                href="/pitch"
+                className="text-zinc-400 hover:text-zinc-100 transition-colors"
+              >
+                Pitch
+              </Link>
               <a
                 href="https://panta.market"
                 target="_blank"
