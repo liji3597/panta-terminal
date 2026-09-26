@@ -150,7 +150,7 @@ impl Store {
         let amt = t.usdc_amount();
         let shares = t.shares.as_deref().and_then(|v| v.parse::<f64>().ok())
             .or_else(|| t.shares_base.as_deref().and_then(|v| v.parse::<f64>().ok()).map(|v| v / 1e6));
-        let price = t.implied_price();
+        let price = t.strict_price();
         let res = sqlx::query(
             r#"INSERT OR IGNORE INTO trades (market_id, wallet, side, amount_usdc, shares, price, signature, ts)
                VALUES (?1,?2,?3,?4,?5,?6,?7,?8)"#,

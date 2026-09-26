@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import {
-  CandlestickSeries,
+  AreaSeries,
   createChart,
   IChartApi,
   ISeriesApi,
@@ -19,7 +19,7 @@ export default function CandleChart({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -37,12 +37,13 @@ export default function CandleChart({
       timeScale: { timeVisible: true, secondsVisible: false },
       rightPriceScale: { borderColor: "#e8e4da" },
     });
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#3d8b62",
-      downColor: "#c0563f",
-      borderVisible: false,
-      wickUpColor: "#3d8b62",
-      wickDownColor: "#c0563f",
+    const series = chart.addSeries(AreaSeries, {
+      lineColor: "#3d8b62",
+      lineWidth: 2,
+      topColor: "rgba(61, 139, 98, 0.24)",
+      bottomColor: "rgba(61, 139, 98, 0.02)",
+      priceLineColor: "#d97757",
+      priceLineWidth: 1,
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -58,25 +59,19 @@ export default function CandleChart({
     seriesRef.current.setData(
       candles.map((c) => ({
         time: c.bucketStart as UTCTimestamp,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
+        value: c.close,
       })),
     );
     chartRef.current?.timeScale().scrollToRealTime();
   }, [candles]);
 
-  // fold live ticks into the last candle
+  // fold live ticks into the latest point
   useEffect(() => {
     if (!seriesRef.current || livePrice === null || candles.length === 0) return;
     const last = candles[candles.length - 1];
     seriesRef.current.update({
       time: last.bucketStart as UTCTimestamp,
-      open: last.open,
-      high: Math.max(last.high, livePrice),
-      low: Math.min(last.low, livePrice),
-      close: livePrice,
+      value: livePrice,
     });
   }, [livePrice, candles]);
 

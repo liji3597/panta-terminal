@@ -188,6 +188,28 @@ impl Trade {
             None
         }
     }
+
+    /// Price derived only from *real* USDC amounts — no base-unit fallback.
+    /// The fallback in `usdc_amount()` (yes/no token legs) approximates the
+    /// share count, not the price paid, which fabricates price == 1.0 rows.
+    /// Candles must use this; volume estimates may keep the fallback.
+    pub fn strict_price(&self) -> Option<f64> {
+        if let Some(p) = self.price.as_ref().and_then(crate::norm_price) {
+            return Some(p);
+        }
+        let amt = match &self.amount_usdc {
+            Some(serde_json::Value::String(s)) => s.parse::<f64>().ok(),
+            Some(serde_json::Value::Number(n)) => n.as_f64(),
+            _ => None,
+        }?;
+        let shares = self.shares.as_deref().and_then(|s| s.parse::<f64>().ok())
+            .or_else(|| self.shares_base.as_deref().and_then(|s| s.parse::<f64>().ok()).map(|v| v / 1e6))?;
+        if shares > 0.0 {
+            Some(amt / shares)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
