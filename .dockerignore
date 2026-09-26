@@ -1,0 +1,9 @@
+target/
+node_modules/
+.next/
+web/node_modules
+web/.next
+.env
+panta-terminal.db
+*.log
+.git

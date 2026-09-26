@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: panta-terminal-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PANTA_API_KEY
+        sync: false
+      - key: PANTA_TEST_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:///data/panta-terminal.db
+      - key: RUST_LOG
+        value: info
+    disk:
+      name: panta-data
+      mountPath: /data
+      sizeGB: 1
