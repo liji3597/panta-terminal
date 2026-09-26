@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   API,
+  fetchMarketDetail,
   fetchRadar,
   fmtPct,
   fmtUsd,
@@ -33,6 +34,33 @@ export default function RadarPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Titles don't ship in list rows (Panta API limitation). Lazily fetch
+  // details for untitled cards in small batches — our backend caches each
+  // one, so every visitor shrinks the untitled pool for the next.
+  useEffect(() => {
+    const missing = markets.filter((m) => !m.title).slice(0, 8);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      for (const m of missing) {
+        try {
+          const d = await fetchMarketDetail(m.marketId);
+          const title = d.question || d.title;
+          if (title && !cancelled) {
+            setMarkets((prev) =>
+              prev.map((x) => (x.marketId === m.marketId ? { ...x, title } : x)),
+            );
+          }
+        } catch {
+          /* title stays as id-prefix fallback */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [markets]);
 
   const connected = useLiveEvents((e) => {
     if (e.type === "tick") setLastTick(e.ts);

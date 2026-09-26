@@ -102,14 +102,14 @@ async fn tick(
             need_titles.push(m.market_id.clone());
         }
     }
-    for id in need_titles.iter().skip(*drip_cursor % need_titles.len().max(1)).take(5) {
+    for id in need_titles.iter().skip(*drip_cursor % need_titles.len().max(1)).take(12) {
         if let Ok(d) = client.get_market(id, Env::Live).await {
             let title = d.question.clone().or(d.row.title.clone());
             let v = serde_json::to_value(&d).unwrap_or_default();
             store.cache_detail(id, title.as_deref(), &v, ts).await.ok();
         }
     }
-    *drip_cursor = drip_cursor.wrapping_add(5);
+    *drip_cursor = drip_cursor.wrapping_add(12);
 
     // trades drip: top-volume markets regardless of phase (resolved markets
     // keep their tapes — that's leaderboard history), rotating 15 per tick

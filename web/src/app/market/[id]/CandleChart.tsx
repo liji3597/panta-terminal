@@ -62,7 +62,8 @@ export default function CandleChart({
         value: c.close,
       })),
     );
-    chartRef.current?.timeScale().scrollToRealTime();
+    // sparse data: fit everything on screen instead of scrolling to now
+    chartRef.current?.timeScale().fitContent();
   }, [candles]);
 
   // fold live ticks into the latest point

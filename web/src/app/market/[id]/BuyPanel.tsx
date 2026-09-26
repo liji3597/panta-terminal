@@ -35,7 +35,13 @@ async function post(path: string, body: unknown) {
   return j;
 }
 
-export default function BuyPanel({ marketId }: { marketId: string }) {
+export default function BuyPanel({
+  marketId,
+  yesPrice,
+}: {
+  marketId: string;
+  yesPrice?: number | null;
+}) {
   const { connection } = useConnection();
   const { publicKey, signTransaction, connected } = useWallet();
   const [sandbox, setSandbox] = useState(
@@ -121,21 +127,32 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2">
-        {(["yes", "no"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setSide(s)}
-            className={`rounded-xl py-2 text-sm font-bold uppercase transition-colors duration-200 ${
-              side === s
-                ? s === "yes"
-                  ? "bg-yes text-white"
-                  : "bg-no text-white"
-                : "bg-parchment text-mute hover:bg-line"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+        {(["yes", "no"] as const).map((s) => {
+          const pct =
+            yesPrice == null
+              ? null
+              : Math.round((s === "yes" ? yesPrice : 1 - yesPrice) * 100);
+          return (
+            <button
+              key={s}
+              onClick={() => setSide(s)}
+              className={`rounded-xl py-2 text-sm font-bold uppercase transition-colors duration-200 ${
+                side === s
+                  ? s === "yes"
+                    ? "bg-yes text-white"
+                    : "bg-no text-white"
+                  : "bg-parchment text-mute hover:bg-line"
+              }`}
+            >
+              {s}
+              {pct !== null && (
+                <span className="tnum ml-1 font-semibold opacity-90">
+                  {pct}¢
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <label className="mb-1 block text-xs text-mute">Amount (USDC)</label>

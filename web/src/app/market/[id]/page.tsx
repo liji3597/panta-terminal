@@ -87,10 +87,16 @@ export default function MarketPage({
         </span>
       </div>
 
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <h1 className="max-w-3xl font-display text-3xl font-semibold leading-snug tracking-tight">
-          {title}
-        </h1>
+      {/* header: title + big odds, Polymarket-style */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-3xl">
+          <span className="text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
+            {detail?.category ?? "market"} · {detail?.status ?? detail?.phase ?? "—"}
+          </span>
+          <h1 className="mt-1 font-display text-3xl font-semibold leading-snug tracking-tight">
+            {title}
+          </h1>
+        </div>
         <div className="text-right">
           <div className="tnum font-display text-4xl font-semibold text-yes">
             {fmtPct(typeof yesPrice === "string" ? Number(yesPrice) : yesPrice)}
@@ -99,67 +105,63 @@ export default function MarketPage({
         </div>
       </div>
 
+      {/* stats strip */}
+      <dl className="mb-6 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">
+        <Stat k="Volume" v={fmtUsd(Number(detail?.volumeUsdc ?? NaN) || null)} />
+        <Stat k="Ends" v={fmtTime(detail?.endTime)} />
+        <Stat k="Resolution" v={fmtTime(detail?.resolutionTime)} />
+        <Stat
+          k="Source"
+          v=""
+          link={`https://panta.market/market/${id}`}
+          linkText="panta.market ↗"
+        />
+      </dl>
+
       {error && <p className="mb-4 text-no">Detail error: {error}</p>}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-card lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
-              YES price history{" "}
-              <span className="text-xs font-normal text-accent-deep">
-                (captured by Panta Terminal — not available on panta.market)
-              </span>
-            </h2>
-            <div className="flex gap-1 rounded-full border border-line bg-cream p-0.5 text-xs">
-              {INTERVALS.map((i) => (
-                <button
-                  key={i.secs}
-                  onClick={() => setIntervalSecs(i.secs)}
-                  className={`rounded-full px-2.5 py-0.5 transition-colors duration-200 ${
-                    interval === i.secs
-                      ? "bg-accent-soft text-accent-deep font-medium"
-                      : "text-mute hover:text-ink"
-                  }`}
-                >
-                  {i.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <CandleChart candles={candles} livePrice={livePrice} />
-        </section>
-
-        <aside className="space-y-4">
-          <BuyPanel marketId={id} />
+        {/* left column: chart, rules, tape */}
+        <div className="space-y-4 lg:col-span-2">
           <section className="rounded-2xl border border-line bg-card p-5 shadow-card">
-            <h2 className="mb-3 text-sm font-semibold">Market</h2>
-            <dl className="space-y-2 text-xs">
-              <Row k="Category" v={detail?.category ?? "—"} />
-              <Row k="Status" v={detail?.status ?? detail?.phase ?? "—"} />
-              <Row
-                k="Volume"
-                v={fmtUsd(Number(detail?.volumeUsdc ?? NaN) || null)}
-              />
-              <Row k="Ends" v={fmtTime(detail?.endTime)} />
-              <Row k="Resolution" v={fmtTime(detail?.resolutionTime)} />
-            </dl>
-            {detail?.resolutionRule && (
-              <p className="mt-3 border-t border-line pt-3 text-xs leading-relaxed text-mute">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">
+                YES price history{" "}
+                <span className="text-xs font-normal text-accent-deep">
+                  (captured by Panta Terminal — not available on panta.market)
+                </span>
+              </h2>
+              <div className="flex gap-1 rounded-full border border-line bg-cream p-0.5 text-xs">
+                {INTERVALS.map((i) => (
+                  <button
+                    key={i.secs}
+                    onClick={() => setIntervalSecs(i.secs)}
+                    className={`rounded-full px-2.5 py-0.5 transition-colors duration-200 ${
+                      interval === i.secs
+                        ? "bg-accent-soft text-accent-deep font-medium"
+                        : "text-mute hover:text-ink"
+                    }`}
+                  >
+                    {i.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <CandleChart candles={candles} livePrice={livePrice} />
+          </section>
+
+          {detail?.resolutionRule && (
+            <section className="rounded-2xl border border-line bg-card p-5 shadow-card">
+              <h2 className="mb-2 text-sm font-semibold">Resolution rules</h2>
+              <p className="text-sm leading-relaxed text-mute">
                 {detail.resolutionRule}
               </p>
-            )}
-            <a
-              href={`https://panta.market/market/${id}`}
-              target="_blank"
-              className="mt-3 inline-block text-xs text-accent-deep hover:underline"
-            >
-              View on panta.market ↗
-            </a>
-          </section>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-line bg-card p-5 shadow-card">
             <h2 className="mb-3 text-sm font-semibold">Recent tape</h2>
-            <div className="max-h-80 space-y-1.5 overflow-y-auto text-xs">
+            <div className="max-h-72 space-y-1.5 overflow-y-auto text-xs">
               {trades.length === 0 && (
                 <p className="text-mute">No trades captured yet.</p>
               )}
@@ -190,9 +192,66 @@ export default function MarketPage({
               ))}
             </div>
           </section>
+        </div>
+
+        {/* right column: trade ticket + facts */}
+        <aside className="space-y-4">
+          <BuyPanel
+            marketId={id}
+            yesPrice={
+              typeof yesPrice === "string" ? Number(yesPrice) : yesPrice
+            }
+          />
+          <section className="rounded-2xl border border-line bg-card p-5 shadow-card">
+            <h2 className="mb-3 text-sm font-semibold">Market</h2>
+            <dl className="space-y-2 text-xs">
+              <Row k="Category" v={detail?.category ?? "—"} />
+              <Row k="Status" v={detail?.status ?? detail?.phase ?? "—"} />
+              <Row
+                k="Volume"
+                v={fmtUsd(Number(detail?.volumeUsdc ?? NaN) || null)}
+              />
+              <Row k="Ends" v={fmtTime(detail?.endTime)} />
+              <Row k="Resolution" v={fmtTime(detail?.resolutionTime)} />
+            </dl>
+            <a
+              href={`https://panta.market/market/${id}`}
+              target="_blank"
+              className="mt-3 inline-block text-xs text-accent-deep hover:underline"
+            >
+              View on panta.market ↗
+            </a>
+          </section>
         </aside>
       </div>
     </main>
+  );
+}
+
+function Stat({
+  k,
+  v,
+  link,
+  linkText,
+}: {
+  k: string;
+  v: string;
+  link?: string;
+  linkText?: string;
+}) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <dt className="text-xs text-faint">{k}</dt>
+      <dd className="tnum font-medium">
+        {link ? (
+          <a href={link} target="_blank" className="text-accent-deep hover:underline">
+            {linkText}
+          </a>
+        ) : (
+          v
+        )}
+      </dd>
+    </div>
   );
 }
 
