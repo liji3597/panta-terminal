@@ -10,10 +10,6 @@ services:
       - key: PANTA_TEST_API_KEY
         sync: false
       - key: DATABASE_URL
-        value: sqlite:///data/panta-terminal.db
+        value: sqlite://panta-terminal.db
       - key: RUST_LOG
         value: info
-    disk:
-      name: panta-data
-      mountPath: /data
-      sizeGB: 1
