@@ -13,11 +13,12 @@ export default function WalletButton() {
   return (
     <WalletMultiButton
       style={{
-        height: 32,
-        fontSize: 12,
-        borderRadius: 8,
-        background: "#059669",
-        padding: "0 14px",
+        height: 34,
+        fontSize: 13,
+        fontWeight: 500,
+        borderRadius: 9999,
+        background: "#d97757",
+        padding: "0 18px",
       }}
     />
   );

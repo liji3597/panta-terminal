@@ -99,18 +99,20 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
     }
   }
 
-  const busy = ["quoting", "building", "signing", "submitting"].includes(stage.s);
+  const busy = ["quoting", "building", "signing", "submitting"].includes(
+    stage.s,
+  );
 
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-zinc-300">Trade</h2>
+    <section className="rounded-2xl border border-line bg-card p-5 shadow-card">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Trade</h2>
         <button
           onClick={() => setSandbox(!sandbox)}
-          className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+          className={`tnum rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors duration-200 ${
             sandbox
-              ? "border-amber-600 text-amber-400"
-              : "border-zinc-700 text-zinc-500"
+              ? "border-accent/40 bg-accent-soft text-accent-deep"
+              : "border-line bg-parchment text-mute"
           }`}
           title="Sandbox uses Panta test fixtures — nothing touches Solana mainnet"
         >
@@ -118,17 +120,17 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      <div className="mb-4 grid grid-cols-2 gap-2">
         {(["yes", "no"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setSide(s)}
-            className={`py-2 rounded-lg text-sm font-bold uppercase transition-colors ${
+            className={`rounded-xl py-2 text-sm font-bold uppercase transition-colors duration-200 ${
               side === s
                 ? s === "yes"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-rose-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-yes text-white"
+                  : "bg-no text-white"
+                : "bg-parchment text-mute hover:bg-line"
             }`}
           >
             {s}
@@ -136,26 +138,26 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
         ))}
       </div>
 
-      <label className="block text-xs text-zinc-500 mb-1">Amount (USDC)</label>
+      <label className="mb-1 block text-xs text-mute">Amount (USDC)</label>
       <input
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         inputMode="decimal"
-        className="w-full mb-3 rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm outline-none focus:border-emerald-600"
+        className="tnum mb-4 w-full rounded-xl border border-line bg-cream px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-accent"
       />
 
       {stage.s === "quoted" && (
-        <div className="mb-3 text-xs text-zinc-400 space-y-1 border border-zinc-800 rounded-lg p-2.5">
+        <div className="mb-4 space-y-1 rounded-xl border border-line bg-cream p-3 text-xs text-mute">
           <div className="flex justify-between">
             <span>Expected shares</span>
-            <span className="text-zinc-100">{stage.quote.shares}</span>
+            <span className="tnum text-ink">{stage.quote.shares}</span>
           </div>
           <div className="flex justify-between">
             <span>Fee</span>
-            <span className="text-zinc-100">${stage.quote.feeUsdc}</span>
+            <span className="tnum text-ink">${stage.quote.feeUsdc}</span>
           </div>
           {stage.quote.disclaimer && (
-            <p className="text-amber-500/80 pt-1">{stage.quote.disclaimer}</p>
+            <p className="pt-1 text-accent-deep">{stage.quote.disclaimer}</p>
           )}
         </div>
       )}
@@ -163,7 +165,7 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
       <button
         onClick={run}
         disabled={!connected || busy}
-        className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-sm font-bold transition-colors"
+        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-accent-deep disabled:bg-parchment disabled:text-faint"
       >
         {!connected
           ? "Connect wallet to trade"
@@ -173,14 +175,14 @@ export default function BuyPanel({ marketId }: { marketId: string }) {
       </button>
 
       {stage.s === "done" && (
-        <p className="mt-3 text-xs text-emerald-400 break-all">
+        <p className="tnum mt-3 break-all text-xs text-yes">
           Order {stage.status} — sig {stage.signature.slice(0, 20)}…
         </p>
       )}
       {stage.s === "error" && (
-        <p className="mt-3 text-xs text-rose-400">{stage.message}</p>
+        <p className="mt-3 text-xs text-no">{stage.message}</p>
       )}
-      <p className="mt-3 text-[11px] text-zinc-600 leading-relaxed">
+      <p className="mt-3 text-[11px] leading-relaxed text-faint">
         Non-custodial: Panta builds the transaction, your wallet signs, we
         broadcast and report the signature for attribution.
       </p>

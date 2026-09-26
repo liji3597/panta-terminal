@@ -27,22 +27,22 @@ export default function CandleChart({
       autoSize: true,
       layout: {
         background: { color: "transparent" },
-        textColor: "#a1a1aa",
+        textColor: "#6e6a61",
         fontFamily: "inherit",
       },
       grid: {
-        vertLines: { color: "#27272a" },
-        horzLines: { color: "#27272a" },
+        vertLines: { color: "#efece4" },
+        horzLines: { color: "#efece4" },
       },
       timeScale: { timeVisible: true, secondsVisible: false },
-      rightPriceScale: { borderColor: "#27272a" },
+      rightPriceScale: { borderColor: "#e8e4da" },
     });
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#10b981",
-      downColor: "#f43f5e",
+      upColor: "#3d8b62",
+      downColor: "#c0563f",
       borderVisible: false,
-      wickUpColor: "#10b981",
-      wickDownColor: "#f43f5e",
+      wickUpColor: "#3d8b62",
+      wickDownColor: "#c0563f",
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -82,7 +82,7 @@ export default function CandleChart({
 
   if (candles.length === 0) {
     return (
-      <div className="h-105 flex items-center justify-center text-zinc-500 text-sm border border-zinc-800 rounded-xl">
+      <div className="h-105 flex items-center justify-center rounded-xl border border-line bg-cream px-8 text-center text-sm text-mute">
         No price history yet — snapshots accumulate every 30 s while the market
         moves. Panta itself doesn't expose history; this chart is built from
         our own capture layer.

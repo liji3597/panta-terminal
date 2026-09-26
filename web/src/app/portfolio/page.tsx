@@ -71,49 +71,49 @@ export default function PortfolioPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="text-xl font-bold mb-6">Portfolio</h1>
+    <main className="mx-auto max-w-4xl px-4 py-10">
+      <h1 className="font-display text-4xl font-semibold tracking-tight mb-8">Portfolio</h1>
 
       {!connected && (
-        <p className="text-zinc-500">Connect your wallet (top right) to see positions.</p>
+        <p className="text-mute">Connect your wallet (top right) to see positions.</p>
       )}
-      {error && <p className="text-rose-400 mb-4">{error}</p>}
+      {error && <p className="text-no mb-4">{error}</p>}
       {connected && positions && positions.length === 0 && (
-        <p className="text-zinc-500">No positions for this wallet.</p>
+        <p className="text-mute">No positions for this wallet.</p>
       )}
 
       <div className="space-y-3">
         {(positions ?? []).map((p, i) => (
           <div
             key={p.marketId ?? i}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-wrap items-center gap-4"
+            className="rounded-2xl border border-line bg-card p-4 shadow-card flex flex-wrap items-center gap-4"
           >
             <Link
               href={`/market/${p.marketId}`}
-              className="font-mono text-sm text-emerald-400 hover:underline"
+              className="font-mono text-[13px] text-accent-deep hover:underline"
             >
               {(p.marketId ?? "").slice(0, 16)}…
             </Link>
-            <span className="text-xs text-zinc-500">{p.phase ?? ""}</span>
+            <span className="text-xs text-faint">{p.phase ?? ""}</span>
             <span className="text-sm">
               {String(p.availableShares ?? p.yesShares ?? "0")} shares
               {p.claimedPayoutUsdc ? ` · paid $${p.claimedPayoutUsdc}` : ""}
             </span>
             <span className="ml-auto">
               {claimed[p.marketId ?? ""] ? (
-                <span className="text-xs text-emerald-400">
+                <span className="text-xs text-yes">
                   claimed ✓ {claimed[p.marketId ?? ""].slice(0, 12)}…
                 </span>
               ) : p.claimable ? (
                 <button
                   onClick={() => claim(p)}
                   disabled={claiming === p.marketId}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-xs font-bold"
+                  className="px-4 py-1.5 rounded-full bg-accent hover:bg-accent-deep disabled:bg-parchment disabled:text-faint text-white text-xs font-semibold transition-colors duration-200"
                 >
                   {claiming === p.marketId ? "claiming…" : "Claim winnings"}
                 </button>
               ) : (
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-faint">
                   {p.phase === "resolved" ? "not claimable" : "open"}
                 </span>
               )}
@@ -122,7 +122,7 @@ export default function PortfolioPage() {
         ))}
       </div>
 
-      <p className="mt-6 text-[11px] text-zinc-600">
+      <p className="mt-6 text-[11px] leading-relaxed text-faint">
         Claims are non-custodial: Panta builds the claim instructions, your
         wallet signs, we broadcast and file the signature for attribution.
       </p>

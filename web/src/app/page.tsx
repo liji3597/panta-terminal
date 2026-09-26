@@ -13,6 +13,12 @@ import {
 
 type SortKey = "volume" | "yesPrice" | "recent";
 
+const sortLabels: Record<SortKey, string> = {
+  volume: "Volume",
+  yesPrice: "YES %",
+  recent: "Recent",
+};
+
 export default function RadarPage() {
   const [markets, setMarkets] = useState<RadarMarket[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -51,14 +57,17 @@ export default function RadarPage() {
   }, [markets]);
 
   const visible = useMemo(() => {
-    let list = markets.filter((m) => category === "all" || (m.category ?? "other") === category);
+    const list = markets.filter(
+      (m) => category === "all" || (m.category ?? "other") === category,
+    );
     // sports first inside every sort — that's where Panta's liquidity lives
     const sportsBoost = (m: RadarMarket) => (m.category === "sports" ? 1 : 0);
     switch (sortKey) {
       case "volume":
         list.sort(
           (a, b) =>
-            sportsBoost(b) - sportsBoost(a) || (b.volumeUsdc ?? 0) - (a.volumeUsdc ?? 0),
+            sportsBoost(b) - sportsBoost(a) ||
+            (b.volumeUsdc ?? 0) - (a.volumeUsdc ?? 0),
         );
         break;
       case "yesPrice":
@@ -72,96 +81,101 @@ export default function RadarPage() {
   }, [markets, category, sortKey]);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6">
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <h1 className="text-xl font-bold">Market Radar</h1>
+    <main className="mx-auto max-w-7xl px-4 py-10">
+      {/* header row */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 mb-3">
+        <h1 className="font-display text-4xl font-semibold tracking-tight">
+          Market Radar
+        </h1>
         <span
-          className={`text-xs px-2 py-0.5 rounded-full border ${
+          className={`tnum mb-1.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
             connected
-              ? "border-emerald-700 text-emerald-400"
-              : "border-zinc-700 text-zinc-500"
+              ? "border-yes/30 bg-yes-soft text-yes"
+              : "border-line bg-parchment text-mute"
           }`}
         >
-          {connected ? "● live" : "○ offline"}
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              connected ? "bg-yes animate-pulse" : "bg-faint"
+            }`}
+          />
+          {connected ? "live" : "offline"}
         </span>
         {lastTick && (
-          <span className="text-xs text-zinc-500">
+          <span className="tnum mb-1.5 text-xs text-faint">
             last snapshot {new Date(lastTick * 1000).toLocaleTimeString()}
           </span>
         )}
-        <div className="ml-auto flex gap-2 text-xs">
-          {(["volume", "yesPrice", "recent"] as SortKey[]).map((k) => (
+        <div className="ml-auto flex gap-1 rounded-full border border-line bg-card p-1 text-xs shadow-card">
+          {(Object.keys(sortLabels) as SortKey[]).map((k) => (
             <button
               key={k}
               onClick={() => setSortKey(k)}
-              className={`px-2.5 py-1 rounded-md border transition-colors ${
+              className={`rounded-full px-3 py-1 transition-colors duration-200 ${
                 sortKey === k
-                  ? "border-emerald-600 text-emerald-400"
-                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  ? "bg-accent-soft text-accent-deep font-medium"
+                  : "text-mute hover:text-ink"
               }`}
             >
-              {k === "volume" ? "Volume" : k === "yesPrice" ? "YES %" : "Recent"}
+              {sortLabels[k]}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6 text-xs">
-        <button
+      <p className="mb-8 max-w-xl text-sm leading-relaxed text-mute">
+        Every Panta prediction market, scanned and ranked in real time — odds,
+        liquidity and momentum in one glance.
+      </p>
+
+      {/* category filter */}
+      <div className="mb-8 flex flex-wrap gap-2 text-xs">
+        <CategoryPill
+          active={category === "all"}
           onClick={() => setCategory("all")}
-          className={`px-2.5 py-1 rounded-md border ${
-            category === "all"
-              ? "border-emerald-600 text-emerald-400"
-              : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
-          }`}
-        >
-          all ({markets.length})
-        </button>
+          label={`all · ${markets.length}`}
+        />
         {categories.map(([c, n]) => (
-          <button
+          <CategoryPill
             key={c}
+            active={category === c}
             onClick={() => setCategory(c)}
-            className={`px-2.5 py-1 rounded-md border ${
-              category === c
-                ? "border-emerald-600 text-emerald-400"
-                : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
-            }`}
-          >
-            {c} ({n})
-          </button>
+            label={`${c} · ${n}`}
+          />
         ))}
       </div>
 
-      {loading && <p className="text-zinc-500">Loading radar…</p>}
+      {loading && (
+        <p className="font-display text-lg italic text-faint">
+          Scanning the markets…
+        </p>
+      )}
       {error && (
-        <p className="text-red-400">
+        <p className="text-no">
           Backend unreachable ({error}) — is <code>{API}</code> running?
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* market grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((m) => (
           <Link
             key={m.marketId}
             href={`/market/${m.marketId}`}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 hover:border-emerald-700/60 transition-colors group"
+            className="group rounded-2xl border border-line bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift"
           >
-            <div className="flex justify-between text-xs uppercase tracking-wide text-zinc-500">
-              <span>{m.category ?? "?"}</span>
-              <span
-                className={
-                  (m.status ?? "").includes("active") ? "text-emerald-400" : ""
-                }
-              >
-                {m.status ?? m.phase ?? "?"}
-              </span>
+            <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em]">
+              <span className="text-faint">{m.category ?? "?"}</span>
+              <StatusBadge status={m.status} phase={m.phase} />
             </div>
-            <p className="mt-2 text-sm font-medium line-clamp-2 min-h-10 group-hover:text-emerald-100">
+            <p className="mt-3 min-h-12 font-display text-[17px] leading-snug font-medium line-clamp-2 transition-colors duration-200 group-hover:text-accent-deep">
               {m.title || `${m.marketId.slice(0, 16)}…`}
             </p>
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-4 flex items-end justify-between gap-4">
               <OddsBar yes={m.yesPrice} />
-              <span className="text-xs text-zinc-500">{fmtUsd(m.volumeUsdc)}</span>
+              <span className="tnum shrink-0 text-xs text-mute">
+                {fmtUsd(m.volumeUsdc)}
+              </span>
             </div>
           </Link>
         ))}
@@ -170,19 +184,62 @@ export default function RadarPage() {
   );
 }
 
+function CategoryPill({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`tnum rounded-full border px-3 py-1 transition-colors duration-200 ${
+        active
+          ? "border-accent/40 bg-accent-soft text-accent-deep font-medium"
+          : "border-line bg-card text-mute hover:border-line-strong hover:text-ink"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function StatusBadge({
+  status,
+  phase,
+}: {
+  status: string | null;
+  phase: string | null;
+}) {
+  const s = status ?? phase ?? "?";
+  const live = (status ?? "").includes("active");
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 ${
+        live ? "bg-yes-soft text-yes" : "bg-parchment text-mute"
+      }`}
+    >
+      {s}
+    </span>
+  );
+}
+
 function OddsBar({ yes }: { yes: number | null }) {
   const pct = yes === null ? null : Math.round(yes * 100);
   return (
-    <div className="flex-1 mr-4">
-      <div className="flex justify-between text-xs mb-1">
-        <span className="text-emerald-400 font-semibold">YES {fmtPct(yes)}</span>
-        <span className="text-rose-400">
+    <div className="flex-1">
+      <div className="tnum mb-1.5 flex justify-between text-xs">
+        <span className="font-semibold text-yes">YES {fmtPct(yes)}</span>
+        <span className="text-no">
           NO {pct === null ? "—" : `${100 - pct}%`}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-rose-950 overflow-hidden">
+      <div className="h-1.5 overflow-hidden rounded-full bg-no-soft">
         <div
-          className="h-full bg-emerald-500 transition-all duration-500"
+          className="h-full rounded-full bg-yes transition-all duration-500"
           style={{ width: `${pct ?? 0}%` }}
         />
       </div>
