@@ -5,3 +5,7 @@ node_modules/
 *.local
 *.log
 panta-terminal.db*
+
+# local sqlite
+*.db
+*.db-journal
