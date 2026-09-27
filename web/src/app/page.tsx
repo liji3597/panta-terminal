@@ -14,6 +14,14 @@ import {
 
 type SortKey = "volume" | "yesPrice" | "recent";
 
+// "Live" means the API says it's tradable AND it hasn't expired — Panta keeps
+// a pool of stuck secondary_active rows whose end time passed months ago.
+function isLiveMarket(m: RadarMarket): boolean {
+  const s = m.status ?? "";
+  const tradable = s === "open" || s.includes("active");
+  return tradable && (m.endTime === null || m.endTime * 1000 > Date.now());
+}
+
 const sortLabels: Record<SortKey, string> = {
   volume: "Volume",
   yesPrice: "YES %",
@@ -88,21 +96,25 @@ export default function RadarPage() {
     const list = markets.filter(
       (m) => category === "all" || (m.category ?? "other") === category,
     );
-    // sports first inside every sort — that's where Panta's liquidity lives
+    // live markets always pin to the top; sports next — that's where Panta's
+    // liquidity lives
+    const liveBoost = (m: RadarMarket) => (isLiveMarket(m) ? 1 : 0);
     const sportsBoost = (m: RadarMarket) => (m.category === "sports" ? 1 : 0);
+    const pin = (a: RadarMarket, b: RadarMarket) =>
+      liveBoost(b) - liveBoost(a) || sportsBoost(b) - sportsBoost(a);
     switch (sortKey) {
       case "volume":
         list.sort(
-          (a, b) =>
-            sportsBoost(b) - sportsBoost(a) ||
-            (b.volumeUsdc ?? 0) - (a.volumeUsdc ?? 0),
+          (a, b) => pin(a, b) || (b.volumeUsdc ?? 0) - (a.volumeUsdc ?? 0),
         );
         break;
       case "yesPrice":
-        list.sort((a, b) => (b.yesPrice ?? -1) - (a.yesPrice ?? -1));
+        list.sort(
+          (a, b) => pin(a, b) || (b.yesPrice ?? -1) - (a.yesPrice ?? -1),
+        );
         break;
       case "recent":
-        list.sort((a, b) => (b.priceTs ?? 0) - (a.priceTs ?? 0));
+        list.sort((a, b) => pin(a, b) || (b.priceTs ?? 0) - (a.priceTs ?? 0));
         break;
     }
     return list;
@@ -190,11 +202,15 @@ export default function RadarPage() {
           <Link
             key={m.marketId}
             href={`/market/${m.marketId}`}
-            className="group rounded-2xl border border-line bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift"
+            className={`group rounded-2xl border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift ${
+              isLiveMarket(m)
+                ? "border-yes/40 hover:border-yes/60"
+                : "border-line hover:border-line-strong"
+            }`}
           >
             <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em]">
               <span className="text-faint">{m.category ?? "?"}</span>
-              <StatusBadge status={m.status} phase={m.phase} />
+              <StatusBadge market={m} />
             </div>
             <p className="mt-3 min-h-12 font-display text-[17px] leading-snug font-medium line-clamp-2 transition-colors duration-200 group-hover:text-accent-deep">
               {m.title || `${m.marketId.slice(0, 16)}…`}
@@ -235,23 +251,18 @@ function CategoryPill({
   );
 }
 
-function StatusBadge({
-  status,
-  phase,
-}: {
-  status: string | null;
-  phase: string | null;
-}) {
-  const s = status ?? phase ?? "?";
-  const live = (status ?? "").includes("active");
+function StatusBadge({ market }: { market: RadarMarket }) {
+  const s = market.status ?? market.phase ?? "?";
+  if (isLiveMarket(market)) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-yes-soft px-2 py-0.5 text-yes">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-yes animate-pulse" />
+        live
+      </span>
+    );
+  }
   return (
-    <span
-      className={`rounded-full px-2 py-0.5 ${
-        live ? "bg-yes-soft text-yes" : "bg-parchment text-mute"
-      }`}
-    >
-      {s}
-    </span>
+    <span className="rounded-full bg-parchment px-2 py-0.5 text-mute">{s}</span>
   );
 }
 
