@@ -1,6 +1,7 @@
 "use client";
 
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 import { useState } from "react";
 import { API } from "@/lib/api";
@@ -53,15 +54,14 @@ export default function BuyPanel({
   const [stage, setStage] = useState<Stage>({ s: "idle" });
 
   const env = sandbox ? "test" : "live";
-
-  // Fixture wallet for sandbox runs without a connected wallet — Panta's
-  // test env never touches Solana, so a placeholder address is fine.
-  const DEMO_WALLET = "11111111111111111111111111111111";
+  const { setVisible: openWalletModal } = useWalletModal();
 
   async function run() {
-    const wallet =
-      publicKey?.toBase58() ?? (sandbox ? DEMO_WALLET : null);
-    if (!wallet) return;
+    if (!publicKey) {
+      openWalletModal(true);
+      return;
+    }
+    const wallet = publicKey.toBase58();
     try {
       setStage({ s: "quoting" });
       const quote: Quote = await post("/api/trade/quote", {
@@ -190,15 +190,13 @@ export default function BuyPanel({
 
       <button
         onClick={run}
-        disabled={(!connected && !sandbox) || busy}
+        disabled={busy}
         className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-accent-deep disabled:bg-parchment disabled:text-faint"
       >
         {busy
           ? `${stage.s}…`
           : !connected
-            ? sandbox
-              ? `Try sandbox buy · $${amount}`
-              : "Connect wallet to trade"
+            ? "Connect wallet to trade"
             : `Buy ${side.toUpperCase()} · $${amount}`}
       </button>
 
