@@ -54,12 +54,18 @@ export default function BuyPanel({
 
   const env = sandbox ? "test" : "live";
 
+  // Fixture wallet for sandbox runs without a connected wallet — Panta's
+  // test env never touches Solana, so a placeholder address is fine.
+  const DEMO_WALLET = "11111111111111111111111111111111";
+
   async function run() {
-    if (!publicKey || !signTransaction) return;
+    const wallet =
+      publicKey?.toBase58() ?? (sandbox ? DEMO_WALLET : null);
+    if (!wallet) return;
     try {
       setStage({ s: "quoting" });
       const quote: Quote = await post("/api/trade/quote", {
-        wallet: publicKey.toBase58(),
+        wallet,
         marketId,
         side,
         amountUsdc: amount,
@@ -70,7 +76,7 @@ export default function BuyPanel({
       setStage({ s: "building" });
       const build = await post("/api/trade/build", {
         quoteId: quote.quoteId,
-        wallet: publicKey.toBase58(),
+        wallet,
         maxSlippageBps: 100,
         env,
       });
@@ -81,6 +87,9 @@ export default function BuyPanel({
         // sandbox: Panta returns fixture order ids; nothing hits Solana
         signature = build.signature ?? bs58.encode(Buffer.alloc(64, 1));
       } else {
+        if (!publicKey || !signTransaction) {
+          throw new Error("Connect a wallet to trade on mainnet");
+        }
         const tx = compileTx(build, publicKey);
         const signed = await signTransaction(tx);
         signature = await connection.sendRawTransaction(signed.serialize(), {
@@ -181,13 +190,15 @@ export default function BuyPanel({
 
       <button
         onClick={run}
-        disabled={!connected || busy}
+        disabled={(!connected && !sandbox) || busy}
         className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-accent-deep disabled:bg-parchment disabled:text-faint"
       >
-        {!connected
-          ? "Connect wallet to trade"
-          : busy
-            ? `${stage.s}…`
+        {busy
+          ? `${stage.s}…`
+          : !connected
+            ? sandbox
+              ? `Try sandbox buy · $${amount}`
+              : "Connect wallet to trade"
             : `Buy ${side.toUpperCase()} · $${amount}`}
       </button>
 
