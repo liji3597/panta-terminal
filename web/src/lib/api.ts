@@ -127,3 +127,14 @@ export function fmtTime(ts: number | null | undefined): string {
 export function shortWallet(w: string): string {
   return w.length > 12 ? `${w.slice(0, 5)}…${w.slice(-4)}` : w;
 }
+
+/** Display name for a market. Some Panta markets genuinely have no title
+ * anywhere (API and panta.market both empty) — fall back to a readable
+ * label with a short id instead of the raw 44-char base58 string. */
+export function marketLabel(
+  title: string | null | undefined,
+  id: string,
+): string {
+  if (title && title.trim()) return title;
+  return `Untitled market ${id.slice(0, 4)}…${id.slice(-4)}`;
+}

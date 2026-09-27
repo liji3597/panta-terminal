@@ -8,6 +8,7 @@ import {
   fmtPct,
   fmtTime,
   fmtUsd,
+  marketLabel,
   shortWallet,
   useLiveEvents,
 } from "@/lib/api";
@@ -35,8 +36,29 @@ export default function MarketPage({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchMarketDetail(id).then(setDetail).catch((e) => setError(e.message));
+    let cancelled = false;
+    let attempts = 0;
+    const load = () => {
+      attempts += 1;
+      fetchMarketDetail(id)
+        .then((d) => {
+          if (!cancelled) setDetail(d);
+        })
+        .catch((e) => {
+          // transient backend hiccup (cold start / redeploy) — retry a few
+          // times instead of leaving the page on bare-id fallback forever
+          if (!cancelled && attempts < 4) {
+            setTimeout(load, 2000);
+          } else if (!cancelled) {
+            setError(e.message);
+          }
+        });
+    };
+    load();
     fetchTrades(id).then(setTrades).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -64,7 +86,7 @@ export default function MarketPage({
     livePrice ??
     (candles.length ? candles[candles.length - 1].close : null) ??
     detail?.yesPrice;
-  const title = detail?.question || detail?.title || id;
+  const title = marketLabel(detail?.question || detail?.title, id);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">

@@ -8,6 +8,7 @@ import {
   fetchRadar,
   fmtPct,
   fmtUsd,
+  marketLabel,
   RadarMarket,
   useLiveEvents,
 } from "@/lib/api";
@@ -213,7 +214,7 @@ export default function RadarPage() {
               <StatusBadge market={m} />
             </div>
             <p className="mt-3 min-h-12 font-display text-[17px] leading-snug font-medium line-clamp-2 transition-colors duration-200 group-hover:text-accent-deep">
-              {m.title || `${m.marketId.slice(0, 16)}…`}
+              {marketLabel(m.title, m.marketId)}
             </p>
             <div className="mt-4 flex items-end justify-between gap-4">
               <OddsBar yes={m.yesPrice} />

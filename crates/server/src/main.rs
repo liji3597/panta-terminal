@@ -112,19 +112,12 @@ async fn market_detail(
     Query(q): Query<EnvQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     if let Ok(Some(cached)) = st.store.cached_detail(&id).await {
-        // A cached entry with no title is poisoned (upstream shipped empty
-        // titles for a while) — treat as a miss and re-fetch from Panta.
-        let has_title = cached
-            .get("question")
-            .and_then(|v| v.as_str())
-            .or_else(|| cached.get("title").and_then(|v| v.as_str()))
-            .map(|t| !t.is_empty())
-            .unwrap_or(false);
-        if has_title {
-            let mut v = cached;
-            v["cached"] = serde_json::Value::Bool(true);
-            return Ok(Json(v));
-        }
+        // Serve the cache as-is: re-probing upstream here makes genuinely
+        // untitled markets cost ~8 s per view forever. Empty-title entries
+        // self-heal via the snapshotter drip (retries + full-catalog sweep).
+        let mut v = cached;
+        v["cached"] = serde_json::Value::Bool(true);
+        return Ok(Json(v));
     }
     // Panta's detail endpoint intermittently returns empty title/question
     // (~1 in 8 calls, load-balanced backends disagree). Retry a few times
