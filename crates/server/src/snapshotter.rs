@@ -103,7 +103,18 @@ async fn tick(
         }
     }
     for id in need_titles.iter().skip(*drip_cursor % need_titles.len().max(1)).take(12) {
-        if let Ok(d) = client.get_market(id, Env::Live).await {
+        // Upstream intermittently returns empty titles — retry twice before caching.
+        let mut detail = client.get_market(id, Env::Live).await;
+        for _ in 0..2 {
+            let titled = detail.as_ref().map(|d| {
+                d.question.as_deref().map(|t| !t.is_empty()).unwrap_or(false)
+                    || d.row.title.as_deref().map(|t| !t.is_empty()).unwrap_or(false)
+            }).unwrap_or(false);
+            if titled { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            detail = client.get_market(id, Env::Live).await;
+        }
+        if let Ok(d) = detail {
             let title = d.question.clone().or(d.row.title.clone());
             let v = serde_json::to_value(&d).unwrap_or_default();
             store.cache_detail(id, title.as_deref(), &v, ts).await.ok();

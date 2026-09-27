@@ -112,11 +112,36 @@ async fn market_detail(
     Query(q): Query<EnvQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     if let Ok(Some(cached)) = st.store.cached_detail(&id).await {
-        let mut v = cached;
-        v["cached"] = serde_json::Value::Bool(true);
-        return Ok(Json(v));
+        // A cached entry with no title is poisoned (upstream shipped empty
+        // titles for a while) — treat as a miss and re-fetch from Panta.
+        let has_title = cached
+            .get("question")
+            .and_then(|v| v.as_str())
+            .or_else(|| cached.get("title").and_then(|v| v.as_str()))
+            .map(|t| !t.is_empty())
+            .unwrap_or(false);
+        if has_title {
+            let mut v = cached;
+            v["cached"] = serde_json::Value::Bool(true);
+            return Ok(Json(v));
+        }
     }
-    let d = st.panta.get_market(&id, parse_env(&q.env)).await.map_err(err)?;
+    // Panta's detail endpoint intermittently returns empty title/question
+    // (~1 in 8 calls, load-balanced backends disagree). Retry a few times
+    // before accepting a titleless payload.
+    let mut d = st.panta.get_market(&id, parse_env(&q.env)).await.map_err(err)?;
+    for _ in 0..3 {
+        if d.question.as_deref().map(|t| !t.is_empty()).unwrap_or(false)
+            || d.row.title.as_deref().map(|t| !t.is_empty()).unwrap_or(false)
+        {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+        match st.panta.get_market(&id, parse_env(&q.env)).await {
+            Ok(retry) => d = retry,
+            Err(_) => break,
+        }
+    }
     let v = serde_json::to_value(&d).unwrap();
     let title = d.question.clone().or(d.row.title.clone());
     let now = std::time::SystemTime::now()

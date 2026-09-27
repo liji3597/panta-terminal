@@ -22,6 +22,7 @@
 1. List cursor pagination loops — every page returns the same rows; full coverage requires status × category fan-out.
 2. Price fields arrive in two formats (`"0.43"` vs 1e9-scaled strings) — needs a normalization rule in docs.
 3. List rows ship empty `title` — forces N detail calls for basic display.
+4. The detail endpoint itself intermittently returns empty `title`/`question` (~1 in 8 calls; load-balanced backends disagree) — consumers must retry or risk caching titleless payloads.
 4. Trade tape uses `blockTime`, and `amountUsdc` is often null on primary buys — amounts must be derived from `yesAmount`/`noAmount` base units.
 5. Some resolved/high-volume markets return empty historical tapes while others persist — inconsistent retention.
 6. Undocumented categories appear in the catalog (stocks, commodities).
